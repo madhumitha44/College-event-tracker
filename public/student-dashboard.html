@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <!-- ADD THESE LIBRARIES FOR PDF DOWNLOAD -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        
+        body {
+            background: #f0f2f5;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .navbar h1 {
+            font-size: 1.5rem;
+        }
+        
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .container {
+            display: flex;
+            min-height: calc(100vh - 70px);
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: white;
+            padding: 20px 0;
+        }
+        
+        .sidebar ul {
+            list-style: none;
+        }
+        
+        .sidebar li {
+            padding: 15px 25px;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sidebar li.active, .sidebar li:hover {
+            background: #f8f9fa;
+            border-left-color: #667eea;
+            color: #667eea;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 30px;
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        .page-header {
+            margin-bottom: 30px;
+        }
+        
+        .page-header h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .events-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            background: white;
+            border-radius: 10px;
+            grid-column: 1 / -1;
+        }
+        
+        .no-data h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .no-data p {
+            color: #888;
+        }
+        
+        .event-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .event-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+        }
+        
+        .event-header h3 {
+            margin-bottom: 5px;
+        }
+        
+        .event-body {
+            padding: 20px;
+        }
+        
+        .event-detail {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #555;
+        }
+        
+        .event-actions {
+            padding: 0 20px 20px;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .qr-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        /* Certificate specific styles */
+        .certificate-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #48bb78;
+        }
+        
+        .certificate-header {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .certificate-header h3 {
+            color: #2c3e50;
+        }
+        
+        .certificate-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .download-btn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .view-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>College Event Tracker</h1>
+        <div>
+            <span id="studentName">Student</span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="sidebar">
+            <ul>
+                <li class="active" data-page="events">
+                    📅 Available Events
+                </li>
+                <li data-page="registered">
+                    ✅ My Registrations
+                </li>
+                <li data-page="certificates">
+                    📜 My Certificates
+                </li>
+                <li data-page="profile">
+                    👤 My Profile
+                </li>
+            </ul>
+        </div>
+        
+        <div class="main-content">
+            <!-- Events Page -->
+            <div id="events-page" class="page active">
+                <div class="page-header">
+                    <h2>Available Events</h2>
+                    <p>Events created by faculty will appear here</p>
+                </div>
+                <div class="events-container" id="events-list">
+                    <!-- Will be populated from faculty -->
+                </div>
+            </div>
+            
+            <!-- Registered Events Page -->
+            <div id="registered-page" class="page">
+                <div class="page-header">
+                    <h2>My Registered Events</h2>
+                    <p>Events you have registered for</p>
+                </div>
+                <div class="events-container" id="registered-list">
+                    <!-- Will show after registration -->
+                </div>
+            </div>
+            
+            <!-- Certificates Page -->
+            <div id="certificates-page" class="page">
+                <div class="page-header">
+                    <h2>My Certificates</h2>
+                    <p>Certificates uploaded by faculty</p>
+                </div>
+                <div id="certificates-container">
+                    <!-- Certificates will appear here -->
+                </div>
+            </div>
+            
+            <!-- Profile Page -->
+            <div id="profile-page" class="page">
+                <div class="page-header">
+                    <h2>My Profile</h2>
+                    <p>Your information</p>
+                </div>
+                <div style="background: white; padding: 25px; border-radius: 10px;">
+                    <div id="profile-details">
+                        <!-- Will show after registration -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Registration Modal -->
+    <div class="modal" id="registration-modal">
+        <div class="modal-content">
+            <h3>Register for Event</h3>
+            <p id="modal-event-name"></p>
+            <form id="registration-form">
+                <input type="hidden" id="event-id">
+                
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" class="form-control" id="reg-name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" class="form-control" id="reg-email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Phone Number *</label>
+                    <input type="tel" class="form-control" id="reg-phone" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>College *</label>
+                    <input type="text" class="form-control" id="reg-college" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Year *</label>
+                    <select class="form-control" id="reg-year" required>
+                        <option value="">Select Year</option>
+                        <option>First Year</option>
+                        <option>Second Year</option>
+                        <option>Third Year</option>
+                        <option>Fourth Year</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Department *</label>
+                    <input type="text" class="form-control" id="reg-dept" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Roll Number *</label>
+                    <input type="text" class="form-control" id="reg-rollno" required>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="closeModal()" style="background: #ccc;">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Registration</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- QR Code Modal -->
+    <div class="modal" id="qr-modal">
+        <div class="modal-content">
+            <h3>Attendance QR Code</h3>
+            <p id="qr-event-name"></p>
+            <div class="qr-container">
+                <div id="qr-code" style="width: 200px; height: 200px; margin: 0 auto; border: 1px solid #ddd;"></div>
+            </div>
+            <div style="text-align: center; margin: 15px 0;">
+                <p id="qr-student-info"></p>
+                <p id="qr-registration-id"></p>
+            </div>
+            <button class="btn" onclick="closeQRModal()" style="width: 100%;">Close</button>
+        </div>
+    </div>
+
+    <script>
+    // ============================================
+    // CONFIGURATION & INITIALIZATION
+    // ============================================
+    const API_URL = window.location.origin + "/api";
+
+    // Global helper for Backend Calls
+    async function apiCall(endpoint, method = 'GET', body = null) {
+        const options = {
+            method,
+            headers: { 'Content-Type': 'application/json' }
+        };
+        if (body) options.body = JSON.stringify(body);
+
+        const response = await fetch(`${API_URL}${endpoint}`, options);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'API Error');
+        return data;
+    }
+
+    let currentStudentEmail = '';
+    let events = [];
+    let registrations = [];
+    let certificates = [];
+    let studentInfo = null;
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        // 1. Check Login Session (Keep localStorage for this)
+        if (!localStorage.getItem('studentLoggedIn')) {
+            window.location.href = 'index.html';
+            return;
+        }
+
+        const savedStudentInfo = localStorage.getItem('studentInfo');
+        
+        if (savedStudentInfo) {
+            studentInfo = JSON.parse(savedStudentInfo);
+            console.log("studentInfo = ", studentInfo);
+            currentStudentEmail = studentInfo.email;
+            document.getElementById('studentName').textContent = studentInfo.name || 'Student';
+        } else {
+            alert('Please login again');
+            window.location.href = 'index.html';
+            return;
+        }
+
+        // 2. Setup UI Components
+        setupNavigation();
+        document.getElementById('registration-form').addEventListener('submit', handleRegistration);
+
+        // 3. Load Data from DynamoDB
+        await loadAllData();
+    });
+
+    // ============================================
+    // DATA LOADING FROM BACKEND (DynamoDB)
+    // ============================================
+    async function loadAllData() {
+    try {
+        console.log('Fetching data for:', currentStudentEmail);
+        
+        const [allEvents, myRegs, myCerts] = await Promise.all([
+            apiCall('/events'),
+            apiCall(`/registrations/student/${currentStudentEmail}`),
+            apiCall(`/certificates/student/${currentStudentEmail}`)
+        ]);
+
+        events = allEvents;
+        registrations = myRegs;
+        certificates = myCerts;
+
+        // CRITICAL DEBUG: Check exactly what the backend is sending
+        console.log("Events from Backend:", events);
+        console.log("Certificates from Backend:", certificates);
+
+        // Refresh UI
+        refreshEvents();
+        refreshRegistrations();
+        refreshCertificates();
+        refreshProfile();
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+        }
+    }
+
+    // ============================================
+    // EVENT DISPLAY LOGIC
+    // ============================================
+    function refreshEvents() {
+        const container = document.getElementById('events-list');
+        
+        // Filter: Show only events student hasn't registered for yet
+        const availableEvents = events.filter(event => {
+            return !registrations.some(reg => reg.eventId === (event.eventId || event.id));
+        });
+
+        if (availableEvents.length === 0) {
+            container.innerHTML = `<div class="no-data"><h3>No New Events Available</h3></div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        availableEvents.forEach(event => {
+            console.log("event = ",event);
+
+        console.log("Registrations = ",registrations);
+        
+            
+        const current = event.currentParticipants || 0;
+        const max = parseInt(event.maxParticipants) || 0;
+        const availableSeats = max - current;
+        const isFull = max > 0 && availableSeats <= 0;
+            const eventId = event.eventId || event.id;
+            const eventCard = document.createElement('div');
+            eventCard.className = 'event-card';
+            eventCard.innerHTML = `
+                <div class="event-header">
+                    <h3>${event.name}</h3>
+                    <p>By: ${event.facultyName || 'Faculty'}</p>
+                </div>
+                <div class="event-body">
+                    <div class="event-detail">📅 ${event.date}</div>
+                    <div class="event-detail">⏰ ${event.time}</div>
+                    <div class="event-detail">📍 ${event.venue}</div>
+                    <div class="event-detail">${event.description}</div>
+                    <div class="event-detail">
+                    <p style="margin-top:10px; font-weight:bold; color: ${isFull ? '#e53e3e' : '#4a5568'}">
+                    Capacity: ${availableSeats} / ${max === 0 ? '∞' : max} 
+                    ${isFull ? '(FULL)' : ''}
+                </p></div>
+                </div>
+                <div class="event-actions">
+                    <button class="btn btn-primary" onclick="openRegistration('${eventId}')">
+                        Register Now
+                    </button>
+                </div>
+            `;
+            container.appendChild(eventCard);
+        });
+    }
+
+    // ============================================
+    // REGISTRATION SYSTEM
+    // ============================================
+    function openRegistration(eventId) {
+        const event = events.find(e => (e.eventId || e.id) === eventId);
+        if (!event) return;
+
+        document.getElementById('event-id').value = eventId;
+        document.getElementById('modal-event-name').textContent = event.name;
+
+        // Pre-fill form from session
+        document.getElementById('reg-name').value = studentInfo.name || '';
+        document.getElementById('reg-email').value = studentInfo.email || '';
+        document.getElementById('reg-college').value = studentInfo.details?.college || '';
+        document.getElementById('reg-rollno').value = studentInfo.details?.rollNo || '';
+
+        document.getElementById('registration-modal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('registration-modal').classList.remove('active');
+    }
+
+    async function handleRegistration(e) {
+        e.preventDefault();
+        const eventId = document.getElementById('event-id').value;
+
+        const registrationData = {
+            eventId: eventId,
+            studentEmail: currentStudentEmail,
+            studentName: document.getElementById('reg-name').value,
+            studentDetails: {
+                phone: document.getElementById('reg-phone').value,
+                college: document.getElementById('reg-college').value,
+                year: document.getElementById('reg-year').value,
+                department: document.getElementById('reg-dept').value,
+                rollNo: document.getElementById('reg-rollno').value
+            }
+        };
+
+        try {
+            const result = await apiCall('/registrations', 'POST', registrationData);
+            alert(`✅ Registration Successful!\nID: ${result.registrationId}`);
+            closeModal();
+            await loadAllData(); // Refresh UI from DB
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+
+    // ============================================
+    // REGISTERED LIST & QR
+    // ============================================
+    function refreshRegistrations() {
+        const container = document.getElementById('registered-list');
+        
+        if (registrations.length === 0) {
+            container.innerHTML = `<div class="no-data"><h3>No Registrations Yet</h3></div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        
+        registrations.forEach(reg => {
+            const localEvent = events.find(e => (e.eventId || e.id) === reg.eventId);
+            const displayEventName = reg.eventName || (localEvent ? localEvent.name : `Event ID: ${reg.eventId}`);
+            
+            // Create a unique ID for the QR container
+            const qrBoxId = `qr-container-${reg.registrationId}`;
+            
+            const eventCard = document.createElement('div');
+            eventCard.className = 'event-card';
+            eventCard.innerHTML = `
+                <div class="event-header">
+                    <h3>${displayEventName}</h3>
+                    <p>Status: <span style="font-weight:bold; color: ${reg.attendanceMarked ? '#28a745' : '#f39c12'}">
+                        ${reg.attendanceMarked ? '✅ Attended' : '⏳ Registered'}
+                    </span></p>
+                </div>
+                <div class="event-body">
+                    <div class="event-detail">📝 Registration ID: ${reg.registrationId}</div>
+                    <div id="${qrBoxId}" class="qr-code-box" style="margin-top: 15px; display: flex; justify-content: center;"></div>
+                </div>
+                <div class="event-actions" style="margin-top: 15px; text-align: center;">
+                    ${!reg.attendanceMarked ? 
+                        `<p style="font-size: 0.8rem; color: #666; margin-bottom: 5px;">Show this QR to the Faculty</p>` : 
+                        `<p style="color: #28a745; font-size: 0.9rem;">Attendance Verified</p>`
+                    }
+                </div>
+            `;
+            container.appendChild(eventCard);
+
+            // Automatically generate the QR Code if attendance isn't marked yet
+            if (!reg.attendanceMarked) {
+                setTimeout(() => {
+                    new QRCode(document.getElementById(qrBoxId), {
+                        text: reg.registrationId,
+                        width: 128,
+                        height: 128,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }, 100);
+            }
+        });
+    }
+
+    function generateQR(registrationId) {
+        const reg = registrations.find(r => r.registrationId === registrationId);
+        if (!reg) return;
+
+        const qrContainer = document.getElementById('qr-code');
+        qrContainer.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">📱</div>
+                <div><strong>${reg.studentName}</strong></div>
+                <div>${reg.registrationId}</div>
+                <div style="margin-top: 10px; color: #666;">Present this at the venue</div>
+            </div>
+        `;
+        document.getElementById('qr-modal').classList.add('active');
+    }
+
+    function closeQRModal() {
+        document.getElementById('qr-modal').classList.remove('active');
+    }
+
+    // ============================================
+    // CERTIFICATES & PROFILE (Keep original UI logic)
+    // ============================================
+    // ============================================
+// DATA LOADING - UPDATED WITH DEBUGGING
+// ============================================
+async function loadAllData() {
+    try {
+        console.log('Fetching data for:', currentStudentEmail);
+        
+        const [allEvents, myRegs, myCerts] = await Promise.all([
+            apiCall('/events'),
+            apiCall(`/registrations/student/${currentStudentEmail}`),
+            apiCall(`/certificates/student/${currentStudentEmail}`)
+        ]);
+
+        events = allEvents;
+        registrations = myRegs;
+        certificates = myCerts;
+
+        // CRITICAL DEBUG: Check exactly what the backend is sending
+        console.log("Events from Backend:", events);
+        console.log("Certificates from Backend:", certificates);
+
+        // Refresh UI
+        refreshEvents();
+        refreshRegistrations();
+        refreshCertificates();
+        refreshProfile();
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+
+// ============================================
+// CERTIFICATES SYSTEM - ROBUST VERSION
+// ============================================
+// ============================================
+// PDF GENERATION AND DOWNLOAD
+// ============================================
+
+async function downloadCertificate(certId, eventName, facultyEmail, facultyName) {
+    // 1. Fetch Faculty details to get their signature
+    let facultySignature = "";
+    try {
+        const facultyData = await apiCall(`/auth/user/${facultyEmail}`);
+        console.log("fac data= ", facultyData);
+        facultySignature = facultyData.signature || ""; 
+        
+    } catch (e) {
+        console.error("Could not fetch faculty signature");
+    }
+
+    const certContainer = document.createElement('div');
+    certContainer.style.padding = '40px';
+    certContainer.style.width = '800px';
+    certContainer.style.background = 'white';
+    certContainer.style.border = '20px solid #764ba2';
+    certContainer.style.textAlign = 'center';
+    certContainer.style.position = 'absolute';
+    certContainer.style.left = '-9999px';
+
+    certContainer.innerHTML = `
+        <h1 style="color: #764ba2; font-size: 3rem;">CERTIFICATE</h1>
+        <p style="font-size: 1.2rem;">OF PARTICIPATION</p>
+        <br><br>
+        <p>This is to certify that</p>
+        <h2 style="font-size: 2rem; border-bottom: 2px solid #ccc; display: inline-block; padding: 0 50px;">
+            ${studentInfo.name}
+        </h2>
+        <p>has successfully participated in the event</p>
+        <h3>${eventName}</h3>
+        <p>on ${new Date().toLocaleDateString()}</p>
+        <br><br>
+        <div style="display: flex; justify-content: space-around; align-items: flex-end; margin-top: 50px;">
+            <div style="text-align: center;">
+                ${facultySignature ? `<img src="${facultySignature}" style="max-height: 60px;"><br>` : '<div style="height:60px;"></div>'}
+                <p style="border-top: 1px solid #000; padding-top: 5px; width: 200px;">Authorized Signatory</p>
+                <p style="font-size: 0.8rem;">${facultyName}</p>
+            </div>
+            <div id="cert-qr-${certId}"></div>
+        </div>
+    `;
+
+    document.body.appendChild(certContainer);
+    
+    // Generate QR for the certificate authenticity
+    new QRCode(document.getElementById(`cert-qr-${certId}`), {
+        text: `Verified Certificate: ${certId}`,
+        width: 80,
+        height: 80
+    });
+
+    // Use html2canvas to download
+    const canvas = await html2canvas(certContainer);
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('l', 'mm', [297, 210]);
+    pdf.addImage(imgData, 'PNG', 0, 0, 297, 210);
+    pdf.save(`${eventName}_Certificate.pdf`);
+    
+    document.body.removeChild(certContainer);
+}
+
+function refreshCertificates() {
+    const container = document.getElementById('certificates-container');
+    
+    // Check if certificates is actually an array and has items
+    if (!Array.isArray(certificates) || certificates.length === 0) {
+        container.innerHTML = `
+            <div class="no-data">
+                <h3>No Certificates Yet</h3>
+                <p>Certificates will appear here once issued by faculty for your registered events.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = '';
+    certificates.forEach(cert => {
+        const certCard = document.createElement('div');
+        certCard.className = 'certificate-card';
+        
+        // Handle potential naming mismatches from Backend (DynamoDB keys)
+        console.log("cert data = ",cert);
+        
+        const certId = cert.certificateId || cert.id || 'N/A';
+        const eName = cert.eventName || cert.event_name || `Event ID: ${cert.eventId}`;
+        const iDate = cert.issueDate || cert.issuedAt || cert.created_at;
+        const issuer = cert.issuedBy || cert.facultyName || 'Faculty Member';
+        const facMail = cert.facultyEmail
+
+        certCard.innerHTML = `
+            <div class="certificate-header">
+                <h3>${eName}</h3>
+                <p style="color: #48bb78; font-weight: bold;">Verified Participation</p>
+            </div>
+            <div style="padding: 15px;">
+                <p><strong>Certificate ID:</strong> ${certId}</p>
+                <p><strong>Issued By:</strong> ${issuer}</p>
+                <p><strong>Issued Date:</strong> ${iDate ? new Date(iDate).toLocaleDateString() : 'Pending'}</p>
+            </div>
+            <div class="certificate-actions">
+                <button class="download-btn" onclick="downloadCertificate('${certId}', '${eName}','${facMail}', '${issuer}')">
+                    📥 Download PDF
+                </button>
+            </div>
+        `;
+        container.appendChild(certCard);
+    });
+}
+
+    function refreshProfile() {
+        const container = document.getElementById('profile-details');
+        container.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <p><strong>Name:</strong> ${studentInfo.name}</p>
+                    <p><strong>Email:</strong> ${studentInfo.email}</p>
+                    <p><strong>College:</strong> ${studentInfo.details.details?.college || 'N/A'}</p>
+                </div>
+                <div>
+                    <p><strong>Department:</strong> ${studentInfo.details.details?.department || 'N/A'}</p>
+                    <p><strong>Roll No:</strong> ${studentInfo.details.details?.rollNo || 'N/A'}</p>
+                    <p><strong>Total Events:</strong> ${registrations.length}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    function setupNavigation() {
+        document.querySelectorAll('.sidebar li').forEach(item => {
+            item.addEventListener('click', function() {
+                const pageId = this.getAttribute('data-page');
+                document.querySelectorAll('.sidebar li').forEach(li => li.classList.remove('active'));
+                this.classList.add('active');
+                document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+                document.getElementById(pageId + '-page').classList.add('active');
+            });
+        });
+    }
+
+    function logout() {
+        if (confirm('Are you sure?')) {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+    }
+</script>
+</body>
+</html>
