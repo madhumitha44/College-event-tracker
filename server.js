@@ -1,24 +1,25 @@
-const express = require('express');
-const cors = require('cors');
-const apiRoutes = require('./routes/api');
-require('dotenv').config();
+Set-Content server.js 'const express = require("express");
+const cors = require("cors");
+const path = require("path");
+const apiRoutes = require("./routes/api");
+require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors()); // Allow frontend to communicate with backend
-app.use(express.json()); // Parse JSON bodies
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+app.use("/api", apiRoutes);
 
-// Routes
-app.use('/api', apiRoutes);
-
-// Health Check
-app.get('/', (req, res) => {
-    res.send('College Event Backend is running');
+app.get("/health", (req, res) => {
+    res.send("College Event Backend is running");
 });
 
-// Start Server
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
-});
+});'
